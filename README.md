@@ -1,5 +1,5 @@
 Training repository for NCEAS Workshop
-The MASTER BRANCH.
+Merged branch
 
 # A list of fruit
 * kiwifruit
