@@ -1,0 +1,17 @@
+---
+title: "Data Cleaning"
+author: "Kaitlyn"
+date: "2/4/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This is where the data cleaning scripts will go.
+
+```{r}
+# see all of the amazing code I will write!
+```
+
