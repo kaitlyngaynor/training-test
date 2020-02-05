@@ -369,8 +369,345 @@ summary {
 </div>
 
 
-<p>This is where the data cleaning scripts will go.</p>
-<pre class="r"><code># see all of the amazing code I will write!</code></pre>
+<div id="read-in-the-data" class="section level1">
+<h1>Read in the data</h1>
+<pre class="r"><code>library(dplyr)</code></pre>
+<pre><code>## 
+## Attaching package: 'dplyr'</code></pre>
+<pre><code>## The following objects are masked from 'package:stats':
+## 
+##     filter, lag</code></pre>
+<pre><code>## The following objects are masked from 'package:base':
+## 
+##     intersect, setdiff, setequal, union</code></pre>
+<pre class="r"><code>library(tidyr)</code></pre>
+<pre class="r"><code>catch_original &lt;- read.csv(&quot;https://knb.ecoinformatics.org/knb/d1/mn/v2/object/df35b.302.1&quot;, stringsAsFactors = FALSE)</code></pre>
+<div id="tidy-data" class="section level2">
+<h2>Tidy data</h2>
+<p>Remove the ‘notes’ and ‘all’ columns because we don’t need them.</p>
+<pre class="r"><code>catch_clean &lt;- catch_original %&gt;%
+  select(Region, Year, Chinook, Sockeye, Coho, Pink, Chum)
+
+head(catch_clean)</code></pre>
+<pre><code>##   Region Year Chinook Sockeye Coho Pink Chum
+## 1    SSE 1886       0       5    0    0    0
+## 2    SSE 1887       0     155    0    0    0
+## 3    SSE 1888       0     224   16    0    0
+## 4    SSE 1889       0     182   11   92    0
+## 5    SSE 1890       0     251   42    0    0
+## 6    SSE 1891       0     274   24    0    0</code></pre>
+<p>Alternatively, instead of specifying columns you want, can specify the ones you don’t want with the minus sign.</p>
+<pre class="r"><code>catch_clean &lt;- catch_original %&gt;%
+  select(-All, -notesRegCode)
+
+head(catch_clean)</code></pre>
+<pre><code>##   Region Year Chinook Sockeye Coho Pink Chum
+## 1    SSE 1886       0       5    0    0    0
+## 2    SSE 1887       0     155    0    0    0
+## 3    SSE 1888       0     224   16    0    0
+## 4    SSE 1889       0     182   11   92    0
+## 5    SSE 1890       0     251   42    0    0
+## 6    SSE 1891       0     274   24    0    0</code></pre>
+<p>You can see that something is not right. The Chinook column is a character, not numeric. Let’s try to convert to an integer.</p>
+<pre class="r"><code>catch_clean &lt;- catch_original %&gt;%
+  select(-All, -notesRegCode) %&gt;%
+  mutate(Chinook = as.numeric(Chinook))</code></pre>
+<pre><code>## Warning: NAs introduced by coercion</code></pre>
+<p>This code runs, but we have a warning that <code>NAs introduced by coercion</code>. Something wasn’t able to be converted to a number, so it became an NA.</p>
+<p>Determine which values were converted to NA by <code>as.numeric()</code></p>
+<pre class="r"><code>i &lt;- which(is.na(catch_clean$Chinook))
+i # can see there is one row</code></pre>
+<pre><code>## [1] 401</code></pre>
+<pre class="r"><code>catch_original[i,] </code></pre>
+<pre><code>##     Region Year Chinook Sockeye Coho Pink Chum All notesRegCode
+## 401    GSE 1955       I      66    0    0    1  68</code></pre>
+<p>The Chinook column has an “I” instead of a “1.” Was a scanned PDF and there was an error in reading.</p>
+<p>So let’s actually change how we clean the data. We can use <code>ifelse()</code>, a function that does a test (first argument), then returns values based on yes (second argument) or no (third argument).</p>
+<pre class="r"><code>catch_clean &lt;- catch_original %&gt;%
+  select(-All, -notesRegCode) %&gt;%
+  mutate(Chinook = ifelse(Chinook == &quot;I&quot;, 1, Chinook))
+
+summary(catch_clean)</code></pre>
+<pre><code>##     Region               Year        Chinook             Sockeye        
+##  Length:1708        Min.   :1878   Length:1708        Min.   :    0.00  
+##  Class :character   1st Qu.:1922   Class :character   1st Qu.:    6.75  
+##  Mode  :character   Median :1947   Mode  :character   Median :  330.50  
+##                     Mean   :1946                      Mean   : 1401.09  
+##                     3rd Qu.:1972                      3rd Qu.:  995.50  
+##                     Max.   :1997                      Max.   :44269.00  
+##       Coho             Pink              Chum        
+##  Min.   :   0.0   Min.   :    0.0   Min.   :    0.0  
+##  1st Qu.:   0.0   1st Qu.:    0.0   1st Qu.:    0.0  
+##  Median :  41.5   Median :   34.5   Median :   63.0  
+##  Mean   : 150.4   Mean   : 2357.8   Mean   :  422.0  
+##  3rd Qu.: 175.0   3rd Qu.: 1622.5   3rd Qu.:  507.5  
+##  Max.   :3220.0   Max.   :53676.0   Max.   :10459.0</code></pre>
+<p>Chinook is still a character variable; we need to change it. Add back in the <code>as.numeric</code> function…</p>
+<pre class="r"><code>catch_clean &lt;- catch_original %&gt;%
+  select(-All, -notesRegCode) %&gt;%
+  mutate(Chinook = ifelse(Chinook == &quot;I&quot;, 1, Chinook)) %&gt;%
+  mutate(Chinook = as.numeric(Chinook))
+
+summary(catch_clean)</code></pre>
+<pre><code>##     Region               Year         Chinook          Sockeye        
+##  Length:1708        Min.   :1878   Min.   :  0.00   Min.   :    0.00  
+##  Class :character   1st Qu.:1922   1st Qu.:  0.00   1st Qu.:    6.75  
+##  Mode  :character   Median :1947   Median :  5.00   Median :  330.50  
+##                     Mean   :1946   Mean   : 34.95   Mean   : 1401.09  
+##                     3rd Qu.:1972   3rd Qu.: 35.00   3rd Qu.:  995.50  
+##                     Max.   :1997   Max.   :609.00   Max.   :44269.00  
+##       Coho             Pink              Chum        
+##  Min.   :   0.0   Min.   :    0.0   Min.   :    0.0  
+##  1st Qu.:   0.0   1st Qu.:    0.0   1st Qu.:    0.0  
+##  Median :  41.5   Median :   34.5   Median :   63.0  
+##  Mean   : 150.4   Mean   : 2357.8   Mean   :  422.0  
+##  3rd Qu.: 175.0   3rd Qu.: 1622.5   3rd Qu.:  507.5  
+##  Max.   :3220.0   Max.   :53676.0   Max.   :10459.0</code></pre>
+<p>Now we are in business.</p>
+</div>
+<div id="convert-to-long-format" class="section level2">
+<h2>Convert to long format</h2>
+<p>Use new tidyverse function <code>pivot_longer</code>. Note that we are selecting all of the fish columns (everything BUT region, year).</p>
+<pre class="r"><code>catch_long &lt;- catch_clean %&gt;% 
+  pivot_longer(cols = -c(Region, Year), 
+               names_to = &quot;species&quot;,
+               values_to = &quot;catch&quot;)
+
+head(catch_long)</code></pre>
+<pre><code>## # A tibble: 6 x 4
+##   Region  Year species catch
+##   &lt;chr&gt;  &lt;int&gt; &lt;chr&gt;   &lt;dbl&gt;
+## 1 SSE     1886 Chinook     0
+## 2 SSE     1886 Sockeye     5
+## 3 SSE     1886 Coho        0
+## 4 SSE     1886 Pink        0
+## 5 SSE     1886 Chum        0
+## 6 SSE     1887 Chinook     0</code></pre>
+<p>We can use <code>pivot_wider</code> to reverse what we just did.</p>
+<pre class="r"><code>catch_wide &lt;- catch_long %&gt;% 
+  pivot_wider(names_from = &quot;species&quot;,
+              values_from = &quot;catch&quot;)
+
+head(catch_wide)</code></pre>
+<pre><code>## # A tibble: 6 x 7
+##   Region  Year Chinook Sockeye  Coho  Pink  Chum
+##   &lt;chr&gt;  &lt;int&gt;   &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+## 1 SSE     1886       0       5     0     0     0
+## 2 SSE     1887       0     155     0     0     0
+## 3 SSE     1888       0     224    16     0     0
+## 4 SSE     1889       0     182    11    92     0
+## 5 SSE     1890       0     251    42     0     0
+## 6 SSE     1891       0     274    24     0     0</code></pre>
+<p>Taking a closer look at the data, we can see that the catch is actually in 1,000s of fish. Let’s rename the catch variable to clarify.</p>
+<pre class="r"><code>catch_long &lt;- catch_clean %&gt;% 
+  pivot_longer(cols = -c(Region, Year), 
+               names_to = &quot;species&quot;,
+               values_to = &quot;catch&quot;) %&gt;% 
+  rename(catch_thousands = catch)
+
+head(catch_long)</code></pre>
+<pre><code>## # A tibble: 6 x 4
+##   Region  Year species catch_thousands
+##   &lt;chr&gt;  &lt;int&gt; &lt;chr&gt;             &lt;dbl&gt;
+## 1 SSE     1886 Chinook               0
+## 2 SSE     1886 Sockeye               5
+## 3 SSE     1886 Coho                  0
+## 4 SSE     1886 Pink                  0
+## 5 SSE     1886 Chum                  0
+## 6 SSE     1887 Chinook               0</code></pre>
+<p>And if we want a column that has actual catch, we can rename, then mutate.</p>
+<pre class="r"><code>catch_long &lt;- catch_clean %&gt;% 
+  pivot_longer(cols = -c(Region, Year), 
+               names_to = &quot;species&quot;,
+               values_to = &quot;catch&quot;) %&gt;% 
+  rename(catch_thousands = catch) %&gt;% 
+  mutate(catch = catch_thousands * 1000)
+
+head(catch_long)</code></pre>
+<pre><code>## # A tibble: 6 x 5
+##   Region  Year species catch_thousands catch
+##   &lt;chr&gt;  &lt;int&gt; &lt;chr&gt;             &lt;dbl&gt; &lt;dbl&gt;
+## 1 SSE     1886 Chinook               0     0
+## 2 SSE     1886 Sockeye               5  5000
+## 3 SSE     1886 Coho                  0     0
+## 4 SSE     1886 Pink                  0     0
+## 5 SSE     1886 Chum                  0     0
+## 6 SSE     1887 Chinook               0     0</code></pre>
+<p>And we can get rid of the catch_thousands. We could have done this more cleanly if we had caught it earlier.</p>
+<pre class="r"><code>catch_long &lt;- catch_clean %&gt;% 
+  pivot_longer(cols = -c(Region, Year), 
+               names_to = &quot;species&quot;,
+               values_to = &quot;catch&quot;) %&gt;% 
+  rename(catch_thousands = catch) %&gt;% 
+  mutate(catch = catch_thousands * 1000) %&gt;%
+  select(-catch_thousands)
+
+head(catch_long)</code></pre>
+<pre><code>## # A tibble: 6 x 4
+##   Region  Year species catch
+##   &lt;chr&gt;  &lt;int&gt; &lt;chr&gt;   &lt;dbl&gt;
+## 1 SSE     1886 Chinook     0
+## 2 SSE     1886 Sockeye  5000
+## 3 SSE     1886 Coho        0
+## 4 SSE     1886 Pink        0
+## 5 SSE     1886 Chum        0
+## 6 SSE     1887 Chinook     0</code></pre>
+<p>Calculate mean catch per region - first group, then summarise</p>
+<pre class="r"><code>mean_region &lt;- catch_long %&gt;% 
+  group_by(Region) %&gt;%
+  summarise(mean_catch = mean(catch))
+
+head(mean_region)</code></pre>
+<pre><code>## # A tibble: 6 x 2
+##   Region mean_catch
+##   &lt;chr&gt;       &lt;dbl&gt;
+## 1 ALU        40384.
+## 2 BER        16373.
+## 3 BRB      2709796.
+## 4 CHG       315487.
+## 5 CKI       683571.
+## 6 COP       179223.</code></pre>
+<p>Filter for only sockeye species. Filter is a helpful way to select certain rows.</p>
+<pre class="r"><code>sockeye_catch &lt;- catch_long %&gt;%
+  filter(species == &quot;Sockeye&quot;)
+
+head(sockeye_catch)</code></pre>
+<pre><code>## # A tibble: 6 x 4
+##   Region  Year species  catch
+##   &lt;chr&gt;  &lt;int&gt; &lt;chr&gt;    &lt;dbl&gt;
+## 1 SSE     1886 Sockeye   5000
+## 2 SSE     1887 Sockeye 155000
+## 3 SSE     1888 Sockeye 224000
+## 4 SSE     1889 Sockeye 182000
+## 5 SSE     1890 Sockeye 251000
+## 6 SSE     1891 Sockeye 274000</code></pre>
+<p>Exercise: what region has highest mean sockeye catch during this period.</p>
+<pre class="r"><code>sockeye_mean &lt;- sockeye_catch %&gt;%
+  group_by(Region) %&gt;%
+  summarise(mean_catch = mean(catch))
+
+sockeye_mean</code></pre>
+<pre><code>## # A tibble: 18 x 2
+##    Region mean_catch
+##    &lt;chr&gt;       &lt;dbl&gt;
+##  1 ALU        6839. 
+##  2 BER       36882. 
+##  3 BRB    12516500  
+##  4 CHG      962600  
+##  5 CKI     1772952. 
+##  6 COP      699628. 
+##  7 GSE       46500  
+##  8 KOD     1768793. 
+##  9 KSK       39941. 
+## 10 KTZ           0  
+## 11 NOP      919272. 
+## 12 NRS          27.0
+## 13 NSE      655287. 
+## 14 PWS      235514. 
+## 15 SOP     1214144. 
+## 16 SSE      675929. 
+## 17 YAK      219094. 
+## 18 YUK          50.6</code></pre>
+<p>What if we wanted to order them?</p>
+<p>Arrange will order them by a given column, in increasing order. If you want them decreasing, can add a minus sign, OR use <code>desc()</code> function, which is better for other formats too (not just number, but alphabetical).</p>
+<pre class="r"><code>sockeye_mean &lt;- sockeye_catch %&gt;%
+  group_by(Region) %&gt;%
+  summarise(mean_catch = mean(catch)) %&gt;% 
+  arrange(desc(mean_catch))
+
+head(sockeye_mean)</code></pre>
+<pre><code>## # A tibble: 6 x 2
+##   Region mean_catch
+##   &lt;chr&gt;       &lt;dbl&gt;
+## 1 BRB     12516500 
+## 2 CKI      1772952.
+## 3 KOD      1768793.
+## 4 SOP      1214144.
+## 5 CHG       962600 
+## 6 NOP       919272.</code></pre>
+<p>BRB had the highest count.</p>
+<p>Now that we have our cleaned data, we want to join in with more information on the regions from the region table.</p>
+<pre class="r"><code>region_defs &lt;- read.csv(&quot;https://knb.ecoinformatics.org/knb/d1/mn/v2/object/df35b.303.1&quot;, stringsAsFactors = FALSE) %&gt;%
+  select(code, mgmtArea)
+
+head(region_defs)</code></pre>
+<pre><code>##      code                                  mgmtArea
+## 1     GSE              Unallocated Southeast Alaska
+## 2     NSE                 Northern Southeast Alaska
+## 3     SSE                 Southern Southeast Alaska
+## 4     YAK                                   Yakutat
+## 5 PWSmgmt      Prince William Sound Management Area
+## 6     BER Bering River Subarea Copper River Subarea</code></pre>
+<p>Let’s join the two tables together. You can of course use the pipe, but it’s nice to know what is on the left and what is on the right.</p>
+<pre class="r"><code>catch_joined &lt;- left_join(catch_long, region_defs)</code></pre>
+<p>We get an error; there are no common variables between the data sources, because they have different names. It’s generally always better to explicitly specify what columns you are joining over.</p>
+<pre class="r"><code>catch_joined &lt;- left_join(catch_long, region_defs,
+                          by = c(&quot;Region&quot; = &quot;code&quot;))
+
+head(catch_joined)</code></pre>
+<pre><code>## # A tibble: 6 x 5
+##   Region  Year species catch mgmtArea                 
+##   &lt;chr&gt;  &lt;int&gt; &lt;chr&gt;   &lt;dbl&gt; &lt;chr&gt;                    
+## 1 SSE     1886 Chinook     0 Southern Southeast Alaska
+## 2 SSE     1886 Sockeye  5000 Southern Southeast Alaska
+## 3 SSE     1886 Coho        0 Southern Southeast Alaska
+## 4 SSE     1886 Pink        0 Southern Southeast Alaska
+## 5 SSE     1886 Chum        0 Southern Southeast Alaska
+## 6 SSE     1887 Chinook     0 Southern Southeast Alaska</code></pre>
+<p>Alternatively, we could have renamed one of the columns first before we joined them.</p>
+</div>
+<div id="separate-and-unite" class="section level2">
+<h2>Separate and Unite</h2>
+<p>Let’s make a new dataframe to play with.</p>
+<pre class="r"><code>sites_df &lt;- data.frame(site = c(&quot;HAW-101&quot;,
+                                &quot;HAW-103&quot;,
+                                &quot;OAH-320&quot;,
+                                &quot;OAH-219&quot;,
+                                &quot;MAI-039&quot;),
+                       stringsAsFactors = FALSE)</code></pre>
+<p>Here, we have a column that contains both island and site number, but we want these to be in separate columns. We can use separate to return two columns, and specify the separator.</p>
+<pre class="r"><code>sites_df %&gt;% 
+  separate(col = site, 
+           into = c(&quot;island&quot;, &quot;site_number&quot;), 
+           sep = &quot;-&quot;)</code></pre>
+<pre><code>##   island site_number
+## 1    HAW         101
+## 2    HAW         103
+## 3    OAH         320
+## 4    OAH         219
+## 5    MAI         039</code></pre>
+<p>If we wanted to keep that original column, can set <code>remove = FALSE</code></p>
+<pre class="r"><code>sites_df %&gt;% 
+  separate(col = site, 
+           into = c(&quot;island&quot;, &quot;site_number&quot;), 
+           sep = &quot;-&quot;,
+           remove = FALSE)</code></pre>
+<pre><code>##      site island site_number
+## 1 HAW-101    HAW         101
+## 2 HAW-103    HAW         103
+## 3 OAH-320    OAH         320
+## 4 OAH-219    OAH         219
+## 5 MAI-039    MAI         039</code></pre>
+<p>The reverse of <code>separate()</code> is <code>unite()</code>.</p>
+<p>Copy in another dummy data frame.</p>
+<pre class="r"><code>dates_df &lt;- data.frame(year = c(&quot;1930&quot;,
+                                &quot;1930&quot;,
+                                &quot;1930&quot;),
+                       month = c(&quot;12&quot;,
+                                &quot;12&quot;,
+                                &quot;12&quot;),
+                       day = c(&quot;14&quot;,
+                               &quot;15&quot;,
+                               &quot;16&quot;),
+                       stringsAsFactors = FALSE)</code></pre>
+<pre class="r"><code>dates_df %&gt;% 
+  unite(date, year, month, day, sep = &quot;-&quot;, remove = FALSE)</code></pre>
+<pre><code>##         date year month day
+## 1 1930-12-14 1930    12  14
+## 2 1930-12-15 1930    12  15
+## 3 1930-12-16 1930    12  16</code></pre>
+</div>
+</div>
 
 
 

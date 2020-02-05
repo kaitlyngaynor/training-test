@@ -3,15 +3,272 @@ title: "Data Cleaning"
 author: "Kaitlyn"
 date: "2/4/2020"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-This is where the data cleaning scripts will go.
+# Read in the data
 
 ```{r}
-# see all of the amazing code I will write!
+library(dplyr)
+library(tidyr)
+```
+
+```{r}
+catch_original <- read.csv("https://knb.ecoinformatics.org/knb/d1/mn/v2/object/df35b.302.1", stringsAsFactors = FALSE)
+```
+
+
+## Tidy data
+
+Remove the 'notes' and 'all' columns because we don't need them.
+
+```{r}
+catch_clean <- catch_original %>%
+  select(Region, Year, Chinook, Sockeye, Coho, Pink, Chum)
+
+head(catch_clean)
+```
+
+Alternatively, instead of specifying columns you want, can specify the ones you don't want with the minus sign.
+
+```{r}
+catch_clean <- catch_original %>%
+  select(-All, -notesRegCode)
+
+head(catch_clean)
+```
+
+You can see that something is not right. The Chinook column is a character, not numeric. Let's try to convert to an integer.
+
+```{r}
+catch_clean <- catch_original %>%
+  select(-All, -notesRegCode) %>%
+  mutate(Chinook = as.numeric(Chinook))
+```
+
+This code runs, but we have a warning that `NAs introduced by coercion`. Something wasn't able to be converted to a number, so it became an NA.
+
+Determine which values were converted to NA by `as.numeric()`
+
+```{r}
+i <- which(is.na(catch_clean$Chinook))
+i # can see there is one row
+catch_original[i,] 
+```
+
+The Chinook column has an "I" instead of a "1." Was a scanned PDF and there was an error in reading. 
+
+So let's actually change how we clean the data. We can use `ifelse()`, a function that does a test (first argument), then returns values based on yes (second argument) or no (third argument).
+
+```{r}
+catch_clean <- catch_original %>%
+  select(-All, -notesRegCode) %>%
+  mutate(Chinook = ifelse(Chinook == "I", 1, Chinook))
+
+summary(catch_clean)
+```
+
+Chinook is still a character variable; we need to change it. Add back in the `as.numeric` function...
+
+```{r}
+catch_clean <- catch_original %>%
+  select(-All, -notesRegCode) %>%
+  mutate(Chinook = ifelse(Chinook == "I", 1, Chinook)) %>%
+  mutate(Chinook = as.numeric(Chinook))
+
+summary(catch_clean)
+```
+
+Now we are in business.
+
+## Convert to long format
+
+Use new tidyverse function `pivot_longer`. 
+Note that we are selecting all of the fish columns (everything BUT region, year).
+```{r}
+catch_long <- catch_clean %>% 
+  pivot_longer(cols = -c(Region, Year), 
+               names_to = "species",
+               values_to = "catch")
+
+head(catch_long)
+```
+
+We can use `pivot_wider` to reverse what we just did.
+
+```{r}
+catch_wide <- catch_long %>% 
+  pivot_wider(names_from = "species",
+              values_from = "catch")
+
+head(catch_wide)
+```
+
+Taking a closer look at the data, we can see that the catch is actually in 1,000s of fish. Let's rename the catch variable to clarify.
+
+```{r}
+catch_long <- catch_clean %>% 
+  pivot_longer(cols = -c(Region, Year), 
+               names_to = "species",
+               values_to = "catch") %>% 
+  rename(catch_thousands = catch)
+
+head(catch_long)
+```
+
+And if we want a column that has actual catch, we can rename, then mutate.
+
+```{r}
+catch_long <- catch_clean %>% 
+  pivot_longer(cols = -c(Region, Year), 
+               names_to = "species",
+               values_to = "catch") %>% 
+  rename(catch_thousands = catch) %>% 
+  mutate(catch = catch_thousands * 1000)
+
+head(catch_long)
+```
+
+And we can get rid of the catch_thousands. We could have done this more cleanly if we had caught it earlier.
+
+```{r}
+catch_long <- catch_clean %>% 
+  pivot_longer(cols = -c(Region, Year), 
+               names_to = "species",
+               values_to = "catch") %>% 
+  rename(catch_thousands = catch) %>% 
+  mutate(catch = catch_thousands * 1000) %>%
+  select(-catch_thousands)
+
+head(catch_long)
+```
+
+Calculate mean catch per region - first group, then summarise
+
+```{r}
+mean_region <- catch_long %>% 
+  group_by(Region) %>%
+  summarise(mean_catch = mean(catch))
+
+head(mean_region)
+```
+
+Filter for only sockeye species. Filter is a helpful way to select certain rows.
+
+```{r}
+sockeye_catch <- catch_long %>%
+  filter(species == "Sockeye")
+
+head(sockeye_catch)
+```
+
+Exercise: what region has highest mean sockeye catch during this period.
+
+```{r}
+sockeye_mean <- sockeye_catch %>%
+  group_by(Region) %>%
+  summarise(mean_catch = mean(catch))
+
+sockeye_mean
+```
+
+What if we wanted to order them?
+
+Arrange will order them by a given column, in increasing order. If you want them decreasing, can add a minus sign, OR use `desc()` function, which is better for other formats too (not just number, but alphabetical).
+
+```{r}
+sockeye_mean <- sockeye_catch %>%
+  group_by(Region) %>%
+  summarise(mean_catch = mean(catch)) %>% 
+  arrange(desc(mean_catch))
+
+head(sockeye_mean)
+```
+
+BRB had the highest count.
+
+Now that we have our cleaned data, we want to join in with more information on the regions from the region table.
+
+```{r}
+region_defs <- read.csv("https://knb.ecoinformatics.org/knb/d1/mn/v2/object/df35b.303.1", stringsAsFactors = FALSE) %>%
+  select(code, mgmtArea)
+
+head(region_defs)
+```
+
+Let's join the two tables together. You can of course use the pipe, but it's nice to know what is on the left and what is on the right.
+
+```{r, eval = F}
+catch_joined <- left_join(catch_long, region_defs)
+```
+
+We get an error; there are no common variables between the data sources, because they have different names. It's generally always better to explicitly specify what columns you are joining over.
+
+```{r}
+catch_joined <- left_join(catch_long, region_defs,
+                          by = c("Region" = "code"))
+
+head(catch_joined)
+```
+
+Alternatively, we could have renamed one of the columns first before we joined them.
+
+## Separate and Unite
+
+Let's make a new dataframe to play with.
+
+```{r}
+sites_df <- data.frame(site = c("HAW-101",
+                                "HAW-103",
+                                "OAH-320",
+                                "OAH-219",
+                                "MAI-039"),
+                       stringsAsFactors = FALSE)
+```
+
+Here, we have a column that contains both island and site number, but we want these to be in separate columns. We can use separate to return two columns, and specify the separator.
+
+```{r}
+sites_df %>% 
+  separate(col = site, 
+           into = c("island", "site_number"), 
+           sep = "-")
+```
+
+If we wanted to keep that original column, can set `remove = FALSE`
+
+```{r}
+sites_df %>% 
+  separate(col = site, 
+           into = c("island", "site_number"), 
+           sep = "-",
+           remove = FALSE)
+```
+
+The reverse of `separate()` is `unite()`.
+
+Copy in another dummy data frame.
+
+```{r}
+dates_df <- data.frame(year = c("1930",
+                                "1930",
+                                "1930"),
+                       month = c("12",
+                                "12",
+                                "12"),
+                       day = c("14",
+                               "15",
+                               "16"),
+                       stringsAsFactors = FALSE)
+```
+
+```{r}
+dates_df %>% 
+  unite(date, year, month, day, sep = "-", remove = FALSE)
 ```
 
