@@ -1,0 +1,67 @@
+---
+title: "data-cleaning-exercise"
+author: "Kaitlyn"
+date: "2/5/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+```
+
+Load escapement goals, get rid of extraneous columns, filter to Bristol Bay region and Sockeye species. Lower and Initial.Year are being read as character, because one row has a Lower of "eliminated" (should be NA).
+```{r}
+escapement_goals <- read.csv("https://knb.ecoinformatics.org/knb/d1/mn/v2/object/knb.92014.1",
+                             stringsAsFactors = FALSE) %>% # read in the file
+  filter(Region == "Bristol Bay", Species == "Sockeye") %>% # filter as instructed
+  mutate(Lower = ifelse(Lower == "eliminated", NA, Lower)) %>% # replace "eliminated" with "NA"
+  mutate(Lower = as.integer(Lower)) %>%  # I suppose this would have done the above for me?
+  mutate(Initial.Year = as.integer(Initial.Year)) %>% # convert Initial.Year from character to integer
+  select(System, Lower, Upper, Initial.Year) %>% # take only the columns we need
+  rename(Location = System) # rename 'System' as 'Location' to match below (and it makes more sense to me)
+
+head(escapement_goals)
+```
+
+Load escapement counts. Apply same filters, plus restrict to Locations that are in the goals tab. Also split up date into constituent parts.
+```{r}
+escapement_counts <- read.csv("https://knb.ecoinformatics.org/knb/d1/mn/v2/object/urn%3Auuid%3Af119a05b-bbe7-4aea-93c6-85434dcb1c5e", stringsAsFactors = FALSE) %>% # read in the file
+  rename(Region = SASAP.Region) %>% # rename Region so it matches below
+  filter(Region == "Bristol Bay",
+         Species == "Sockeye",
+         Location %in% escapement_goals$Location) %>% # take only locations that have goals
+  separate(col = sampleDate, into = c("Year", "Month", "Day"), sep = "-", remove = FALSE) # split up date
+
+head(escapement_counts)
+```
+
+Calculate yearly escapement for each location and join with goals, drop any rows where there is no goal for that year, and determine whether each year met escapement goals.
+```{r}
+escapement_yearly <- escapement_counts %>% 
+  group_by(Year, Location) %>% # group by year and location
+  summarise(Total = sum(DailyCount)) 
+
+escapement_joined <- escapement_yearly %>% 
+  left_join(escapement_goals, by = "Location") %>% # append the goals to yearly with a left_join
+  filter(Initial.Year <= Year) %>% # remove any rows for which the year was BEFORE the goal was set
+  mutate(Goal.Met = ifelse((Total > Lower & Total < Upper), 1, 0)) # determine whether count was within goal range
+
+head(escapement_yearly)
+
+#
+escapement_goal_outcome <- escapement_yearly %>% 
+  group_by(Location) %>% 
+
+
+head(escapement_goal_outcome)
+
+```
+
+
