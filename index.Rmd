@@ -13,5 +13,5 @@ knitr::opts_chunk$set(echo = TRUE)
 
 - [Data Cleaning](data-cleaning.html)
 - Data Models
-- Visualization
+- [Visualization](ggplot.html)
 - Manuscript
