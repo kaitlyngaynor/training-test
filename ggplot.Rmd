@@ -1,0 +1,143 @@
+---
+title: "2020-03-06-ggplot2"
+author: "Kaitlyn"
+date: "2/6/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+
+
+# Read in and tidy data
+
+This script reads in the file we need; the base `tryCatch` function will try the first line, but then if it generates an error, it will do something else. In this case, it first tries to read it locally, and if that fails, it will tell you that you need to get it from the KNB, and then it will read it in from the URL that you gave it.
+```{r}
+data_url <- "https://knb.ecoinformatics.org/knb/d1/mn/v2/object/urn%3Auuid%3Af119a05b-bbe7-4aea-93c6-85434dcb1c5e"
+
+esc <- tryCatch(
+    read.csv("data/escapement.csv", stringsAsFactors = FALSE),
+    error=function(cond) {
+        message(paste("Escapement file does not seem to exist, so get it from the KNB."))
+        esc <- read.csv(url(data_url, method = "libcurl"), stringsAsFactors = FALSE)
+        return(esc)
+    }
+)
+
+head(esc)
+```
+
+Calculate annual escapement from daily escapement.
+```{r}
+annual_esc <- esc %>% 
+  mutate(Year = lubridate::year(sampleDate)) %>% # in this case, using lubridate (better than separate in alternative line below)
+  #separate(col = sampleDate, into = c("Year", "Month", "Day"), sep = "-", remove = TRUE) %>% 
+  group_by(SASAP.Region, Species, Year) %>% 
+  summarise(escapement = sum(DailyCount)) %>% 
+  filter(Species %in% c("Chinook", "Sockeye", "Pink", "Chum", "Coho")) # more efficient to use %in% than a bunch of or statements with |
+
+head(annual_esc)
+```
+
+# Make some static plots
+
+Every ggplot starts with argument `ggplot()`. Arguments are data and mapping (how you specify what columns in data frame you want to map to which axes. You almost never see data = and mapping = defined in ggplot2 code, since these are known to be the first two arguments. You start with `ggplot` function and then add things to it. First, you'll want to add the plot geometry (the plot to draw).
+
+Here we have a column plot.
+```{r}
+ggplot(data = annual_esc, mapping = aes(x = Species, y = escapement)) + 
+  geom_col()
+```
+
+To change the color of the bars, can use fill argument...
+```{r}
+ggplot(data = annual_esc, mapping = aes(x = Species, y = escapement, fill = "blue")) + 
+  geom_col()
+```
+But it made the bars red! When we specified fill in aes function, it created a dummy column with word "blue" for every single row, then mapped that variable to the fill axis using default color palette. 
+
+If you want to change the color/size/etc in relation to a given variable in your dataframe, you do want to put it in the aes argument. 
+```{r}
+ggplot(data = annual_esc, mapping = aes(x = Species, y = escapement, fill = SASAP.Region)) + 
+  geom_col()
+```
+
+You can also specify the aes() mapping in the geom_ function as well, and get the same result...
+```{r}
+ggplot(data = annual_esc) + 
+  geom_col(mapping = aes(x = Species, y = escapement, fill = SASAP.Region))
+```
+
+OR move both the data and mapping to geom_call. 
+```{r}
+ggplot() + 
+  geom_col(data = annual_esc, mapping = aes(x = Species, y = escapement, fill = SASAP.Region))
+```
+
+This can be useful when you are bringing in multiple data layers (ex. spatial data) in same plot. HOWEVER, it's generally a good idea to put data and mapping arguments in the ggplot function so that you don't overwrite things with the geom calls.
+
+But in this case, if we just want all bars blue, we can move it down into the geom_col function.
+```{r}
+ggplot(data = annual_esc, mapping = aes(x = Species, y = escapement)) + 
+  geom_col(fill = "blue")
+```
+
+We can also filter the data before putting it into ggplot. This doesn't actually store the filtered data in its own dataframe. This kind of syntax is great if you want to run the same thing for every region... can then just use a loop!
+```{r}
+annual_esc %>% 
+  filter(SASAP.Region == "Kodiak") %>% 
+  ggplot(mapping = aes(x = Year, y = escapement, color = Species)) + 
+    geom_line() +
+    geom_point()
+```
+
+Or the base R version with subset, instead of filter...
+```{r}
+ggplot(subset(annual_esc, SASAP.Region == "Kodiak"), 
+       aes(x = Year, y = escapement, color = Species)) + 
+  geom_line() +
+  geom_point()
+```
+
+But for ease, let's save the Kodiak region in its own dataframe.
+```{r}
+kodiak_esc <- annual_esc %>% 
+  filter(SASAP.Region == "Kodiak")
+
+ggplot(data = kodiak_esc, mapping = aes(x = Year, y = escapement, color = Species)) +
+  geom_line() +
+  geom_point()
+```
+
+You can change axes labels with labs function, OR if you only want to change some of the labels, can use ylab, xlab, etc.
+```{r}
+ggplot(data = kodiak_esc, mapping = aes(x = Year, y = escapement, color = Species)) +
+  geom_line() +
+  geom_point() +
+  ylab("Escapement (num fish)") +
+  ggtitle("Kodiak Salmon Escapement")
+```
+
+The `theme_` functions has a number of default themes.
+```{r}
+ggplot(data = kodiak_esc, mapping = aes(x = Year, y = escapement, color = Species)) +
+  geom_line() +
+  geom_point() +
+  ylab("Escapement (num fish)") +
+  ggtitle("Kodiak Salmon Escapement") + 
+  theme_bw()
+```
+
+
+
+# Make some maps
+
