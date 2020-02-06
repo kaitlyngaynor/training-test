@@ -15,8 +15,12 @@ knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+library(scales)
+library(leaflet)
+library(DT)
 ```
 
+ggplot2 is great! It can get you to publication-quality figures without much code. You shouldn't have to be doing much in Illustrator.
 
 # Read in and tidy data
 
@@ -127,17 +131,99 @@ ggplot(data = kodiak_esc, mapping = aes(x = Year, y = escapement, color = Specie
   ggtitle("Kodiak Salmon Escapement")
 ```
 
-The `theme_` functions has a number of default themes.
+The `theme_` functions has a number of default themes. The `theme` function has a lot of helpful arguments to change many aspects of the figure's appearance. As a note, if you are using ggplot themes, and then making modifications, you need to call them in that order. Otherwise, you will overwrite all of your theme modifications with the ggplot theme.
 ```{r}
 ggplot(data = kodiak_esc, mapping = aes(x = Year, y = escapement, color = Species)) +
   geom_line() +
   geom_point() +
   ylab("Escapement (num fish)") +
   ggtitle("Kodiak Salmon Escapement") + 
-  theme_bw()
+  theme_bw() +
+  theme(legend.position = "bottom",
+        legend.title = element_blank())
 ```
 
+If you like a theme, you can save theme calls to their own object and add to end of ggplot call. This is very handy if you are making multiple plots with the same theme and don't want to repeat yourself.
+```{r}
+my_theme <- theme_bw() +
+  theme(legend.position = "bottom",
+        legend.title = element_blank())
+
+ggplot(data = kodiak_esc, mapping = aes(x = Year, y = escapement, color = Species)) +
+  geom_line() +
+  geom_point() +
+  ylab("Escapement (num fish)") +
+  ggtitle("Kodiak Salmon Escapement") + 
+  my_theme
+```
+
+If we want to fix the y-axis so it isn't in scientific notation anymore... The scales package is great for reformatting. Can also use to fix percentages, etc.
+```{r}
+ggplot(data = kodiak_esc, mapping = aes(x = Year, y = escapement, color = Species)) +
+  geom_line() +
+  geom_point() +
+  scale_y_continuous(labels = comma) +
+  ylab("Escapement (num fish)") +
+  ggtitle("Kodiak Salmon Escapement") + 
+  my_theme
+```
+
+**cowplot** is a great package for creating panels of multiple ggplot figures - can arrange legends, axes, etc. 
+
+Or we can use facet_wrap for a certain subset of cases... Can quickly stitch multiple plots together. If you want different axes for each one, you can free them with the scales = argument.
+
+```{r}
+ggplot(data = annual_esc, mapping = aes(x = Year, y = escapement, color = Species)) +
+  geom_line() +
+  geom_point() +
+  scale_y_continuous(labels = comma) + 
+  facet_wrap(~SASAP.Region, scales = "free_y") +
+  my_theme
+```
 
 
 # Make some maps
 
+```{r}
+locations <- esc %>% 
+  distinct(Location, Latitude, Longitude) %>% 
+  drop_na()
+
+# generate a pretty and interactive data table
+datatable(locations)
+
+head(locations)
+```
+
+Leaflet generates interactive maps. It works similarly to ggplot - but unlike ggplot, it takes pipes instead of plus signs.
+```{r}
+leaflet(locations) %>% 
+  addTiles() %>% 
+  addMarkers(lng = ~Longitude, 
+             lat = ~Latitude, 
+             popup = ~Location) # you need the ~ to indicate that it's modeled on that argument, or mapping to it
+```
+
+To make this a little bit prettier...
+```{r}
+leaflet(locations) %>% 
+  addWMSTiles("https://www.gebco.net/data_and_products/gebco_web_services/web_map_service/mapserv?",
+              layers = 'GEBCO_LATEST',
+              attribution = "Imagery reproduced from the GEBCO_2014 Grid, version 20150318, www.gebco.net") %>%
+  addCircleMarkers(lng = ~Longitude,
+                   lat = ~Latitude,
+                   popup = ~ Location,
+                   radius = 5,
+                   # set fill properties
+                   fillColor = "salmon",
+                   fillOpacity = 1,
+                   # set stroke properties
+                   stroke = T,
+                   weight = 0.5,
+                   color = "white",
+                   opacity = 1)
+```
+
+It's also possible to have images, etc. in the pop-ups. The popups take html code so if you have an image hosted somewhere you can add it in there.
+`popup = "<img src = 'https://urlhere.png' width='20%'/>"`
+And if you want a different image for each of the points, can specify the URLs somewhere in the data frame.
