@@ -168,7 +168,13 @@ ggplot(data = kodiak_esc, mapping = aes(x = Year, y = escapement, color = Specie
   my_theme
 ```
 
+### Multiple plots at once
+
 **cowplot** is a great package for creating panels of multiple ggplot figures - can arrange legends, axes, etc. 
+
+See R bloggers post here: https://www.r-bloggers.com/ggplot2-easy-way-to-mix-multiple-graphs-on-the-same-page/
+
+New package **patchwork**: https://patchwork.data-imaginist.com/
 
 Or we can use facet_wrap for a certain subset of cases... Can quickly stitch multiple plots together. If you want different axes for each one, you can free them with the scales = argument.
 
