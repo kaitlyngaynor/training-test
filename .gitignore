@@ -40,3 +40,5 @@ vignettes/*.pdf
 
 # ignore DS Store
 *.DS_Store
+
+shapefile_demo_data/
