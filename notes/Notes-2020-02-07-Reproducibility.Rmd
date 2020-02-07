@@ -1,0 +1,42 @@
+---
+title: "Notes-2020-02-07-Reproducibility"
+author: "Kaitlyn"
+date: "2/7/2020"
+output: html_document
+---
+
+# References in R Markdown documents
+
+.bib file is BibTeX document with a bunch of references to be found in the document.
+
+Include link to .bib file in YAML of Rmd document (file path w/ reference to Rmd file).
+
+It is possible to copy the BibTeX record from Papers (right click > copy as BibTeX records) and put it into the references.bib document.
+
+There is a key associated with each record, which then needs to be called in the Rmd file with `[@key]`
+
+There is a style sheet available for whatever your target journal is; a meta-data change in the header.
+
+
+# Writing equations in LaTeX
+
+This is the syntax, and here are some examples using the block formatting:
+
+\[ x^n + y^n = z^n \]
+
+\[int_x+3\]
+
+You can also embed equations inside of your text (in-line formatted equations with $)
+where $x$ represents the population count and $x+y$ represents something else.
+
+
+# Integrating figures and tables into Rmd docs
+
+kable package tidies your tables and makes them look pretty in knit output. Can round digits, etc.
+
+# Using rrtools 
+
+https://learning.nceas.ucsb.edu/2020-02-RRCourse/reproducibility-and-provenance.html
+
+RR tools is a neat way to package everything - make a paper!!
+
