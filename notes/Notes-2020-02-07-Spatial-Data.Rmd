@@ -7,9 +7,17 @@ editor_options:
   chunk_output_type: console
 ---
 
+Lesson here: https://learning.nceas.ucsb.edu/2020-02-RRCourse/spatial-vector-analysis-using-sf.html#reading-a-shapefile
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
+## Spatial data analysis
+
+Using sf library. The sf library is the modern standard for vector analysis in R, and it plays very well with tidyverse.
+
+(The raster package is the go-to for working with raster data. Well-documented, well-supported, widely-used.)
 
 Load libraries.
 ```{r}
@@ -19,6 +27,7 @@ library(ggplot2)
 library(leaflet)
 library(scales)
 library(ggmap)
+library(cowplot)
 ```
 
 Read in the data and look at a plot of it.
@@ -27,5 +36,273 @@ Read in the data and look at a plot of it.
 ak_regions <- read_sf("data/shapefile_demo_data/ak_regions_simp.shp")
 
 plot(ak_regions)  
+```
+
+We need to change the projection; it's not good for Alaska, because the Aleutian Islands are on the other side of the international date line.
+
+You need a CRS - coordinate reference system. This projection is how to flatten the 3D data onto a 2D system. An EPSG is always a quick way to reference a CRS—it's a four-digit code. Some good ones: **4326** = WGS84 (Latitude/Longitude from modern GPS systems). **3857** = pseudo-mercator (Google Maps) 
+
+What is current CRS?
+```{r}
+st_crs(ak_regions)
+```
+
+Let's change it to 3338 CRS - Alaska Albers.
+```{r}
+ak_regions_3338 <- ak_regions %>% 
+  st_transform(crs = 3338)
+
+plot(ak_regions_3338)
+```
+
+```{r}
+ak_regions_3338 %>% 
+  select(region)
+```
+
+Geometry column is where the polygons are stored. The geometry column is "sticky" - when you do tidyverse operations on the spatial object, it will stick around with you. But it's never something that you have to call explicitly. You can also turn it into a regular dataframe to drop it, if you want.
+
+### Calculate total population by region
+
+Read in population csv. This is just a regular old dataframe, not a spatial object.
+```{r}
+pop <- read.csv("data/shapefile_demo_data/alaska_population.csv",
+                stringsAsFactors = F)
+
+head(pop)
+```
+
+Convert the csv to an sf points object using hte `st_as_sf` function.
+```{r}
+pop_4326 <- st_as_sf(pop,
+                     coords = c("lng", "lat"), # columns in x, y format 
+                     crs = 4326, # this is what the CRS IS CURRENTLY, not what you want it to be
+                     remove = F) # by default, will remove original lat and long columns; let's keep them for later 
+
+plot(pop_4326)
+```
+
+Now spatial join with the polygons and points.
+```{r, eval = F}
+pop_joined <- st_join(pop_4326, ak_regions_3338, join = st_within)
+```
+
+Uh oh! We have an error, because they are different CRS. This is a reason why it's nice to include the CRS in the name of the objects, to avoid potential issues down the road.
+
+First, transform the pop object, then join.
+```{r}
+pop_3338 <- pop_4326 %>% 
+  st_transform(crs = 3338)
+
+pop_joined <- st_join(pop_3338, ak_regions_3338, join = st_within)
+
+head(pop_joined)
+```
+
+The left join means that we attached the regions to the cities. the `st_join` function takes as arguments two sf objects, then a join function. There are a number of different functions here. Here, we use `st_within` to see what polygon the point is within. If we wanted to see what regions the lines intersected, we might have `st_intersects`. Certain operators won't work with certain functions.
+
+Now calculate the total population per region. Can do this just as you would for a regular dataframe with dplyr.
+```{r}
+pop_region <- pop_joined %>% 
+  group_by(region) %>% 
+  summarise(total_pop = sum(population))
+
+pop_region
+plot(pop_region)
+```
+
+You can see that the geometry column has stuck around. But now the geometry is a vector of points of all of the cities that are within the region.
+
+But if we want it to be a regular dataframe without the geometry, we can convert to a dataframe first.
+```{r}
+pop_region <- pop_joined %>% 
+  as.data.frame %>% 
+  group_by(region) %>% 
+  summarise(total_pop = sum(population))
+
+pop_region
+```
+
+Now let's join the region shapefile (with region geometries) to the pop_region dataframe (which has no spatial information associated with it now). It's just a regular `left_join` now. The sf object needs to be on the left side to keep the geometry
+```{r}
+pop_region_3338 <- left_join(ak_regions_3338, pop_region, by = "region")
+
+plot(pop_region_3338)
+```
+
+We can also combine geometries, and calculate total population for the entire management area, for example.
+```{r}
+pop_mgmt_3338 <- pop_region_3338 %>% 
+  group_by(mgmt_area) %>% 
+  summarise(total_pop = sum(total_pop))
+
+plot(pop_mgmt_3338)
+```
+
+We can keep the original boundaries of the regions if we want, by setting `do_union = F`
+```{r}
+pop_mgmt_3338 <- pop_region_3338 %>% 
+  group_by(mgmt_area) %>% 
+  summarise(total_pop = sum(total_pop), do_union = F)
+
+plot(pop_mgmt_3338)
+```
+
+To write an sf object to disk as a shapefile...
+```{r}
+write_sf(pop_region_3338, "data/shapefile_demo_data/ak_region_population.shp")
+```
+
+## Make maps!
+
+In ggplot, sf objects have a special geom called geom_sf
+```{r}
+ggplot(pop_region_3338) +
+  geom_sf(mapping = aes(fill = total_pop))
+```
+
+Basic map. Let's make it prettier.
+```{r}
+ggplot(pop_region_3338) +
+  geom_sf(mapping = aes(fill = total_pop)) +
+  theme_bw() + 
+  labs(fill = "Total Population") +
+  scale_fill_continuous(low = "khaki",
+                        high = "firebrick",
+                        labels = comma)
+```
+
+(There are a few ggplot functions for plotting raster data. `geom_raster`)
+
+Now let's add in some rivers. Read in the shapefile
+```{r}
+rivers_3338 <- read_sf("data/shapefile_demo_data/ak_rivers_simp.shp")
+st_crs(rivers_3338)
+```
+
+To plot both datasets in same plot, first move the data from ggplot call to the geom_sf function call. It gives us the same map.
+```{r}
+ggplot() +
+  geom_sf(pop_region_3338, mapping = aes(fill = total_pop)) +
+  theme_bw() + 
+  labs(fill = "Total Population") +
+  scale_fill_continuous(low = "khaki",
+                        high = "firebrick",
+                        labels = comma)
+```
+
+Now add in rivers as a separate geom.
+```{r}
+ggplot() +
+  geom_sf(data = pop_region_3338, mapping = aes(fill = total_pop)) +
+  geom_sf(data = rivers_3338, mapping = aes(size = StrOrder), color = "black") +
+  theme_bw() + 
+  labs(fill = "Total Population") +
+  scale_fill_continuous(low = "khaki",
+                        high = "firebrick",
+                        labels = comma)
+```
+
+Ah, the streams look horrible, we need to scale them.
+```{r}
+ggplot() +
+  geom_sf(data = pop_region_3338, mapping = aes(fill = total_pop)) +
+  geom_sf(data = rivers_3338, mapping = aes(size = StrOrder), color = "black") +
+  scale_size(range = c(0.01, 0.2), guide = F) +
+  theme_bw() + 
+  labs(fill = "Total Population") +
+  scale_fill_continuous(low = "khaki",
+                        high = "firebrick",
+                        labels = comma)
+```
+
+And we add on the locations with populations. Adding each geom_sf is kind of like mapping a layer. The order does matter; they are drawn in the order in which you write them. 
+```{r}
+ggplot() +
+  geom_sf(data = pop_region_3338, mapping = aes(fill = total_pop)) +
+  geom_sf(data = rivers_3338, mapping = aes(size = StrOrder), color = "black") +
+  geom_sf(data = pop_3338, mapping = aes(), size = 0.5) +
+  scale_size(range = c(0.01, 0.2), guide = F) +
+  theme_bw() + 
+  labs(fill = "Total Population") +
+  scale_fill_continuous(low = "khaki",
+                        high = "firebrick",
+                        labels = comma)
+```
+
+FYI: The package **ggnewscale** allows you to change the color scale between mapping geoms so that you aren't stuck with one scale_fill_continuous for all polygons, for example. 
+
+#### Incorporating base mapes with ggmap
+
+Transform the pop_3338 into pseudo-mercator projection, which is what Google Maps uses.
+```{r}
+pop_3857 <- pop_3338 %>%
+  st_transform(crs = 3857)
+```
+
+We need a workaround. CRS returned from tile server doesn't match the bounding box, so this function in the lesson fixes that issue.
+```{r}
+# Define a function to fix the bbox to be in EPSG:3857
+# See https://github.com/dkahle/ggmap/issues/160#issuecomment-397055208
+ggmap_bbox_to_3857 <- function(map) {
+  if (!inherits(map, "ggmap")) stop("map must be a ggmap object")
+  # Extract the bounding box (in lat/lon) from the ggmap to a numeric vector, 
+  # and set the names to what sf::st_bbox expects:
+  map_bbox <- setNames(unlist(attr(map, "bb")), 
+                       c("ymin", "xmin", "ymax", "xmax"))
+  
+  # Coonvert the bbox to an sf polygon, transform it to 3857, 
+  # and convert back to a bbox (convoluted, but it works)
+  bbox_3857 <- st_bbox(st_transform(st_as_sfc(st_bbox(map_bbox, crs = 4326)), 3857))
+  
+  # Overwrite the bbox of the ggmap object with the transformed coordinates 
+  attr(map, "bb")$ll.lat <- bbox_3857["ymin"]
+  attr(map, "bb")$ll.lon <- bbox_3857["xmin"]
+  attr(map, "bb")$ur.lat <- bbox_3857["ymax"]
+  attr(map, "bb")$ur.lon <- bbox_3857["xmax"]
+  map
+}
+```
+
+
+Now we need to define a bounding box of interest and get the basemap.
+```{r}
+bbox <- c(-170, 52, -130, 64)   # This is roughly southern Alaska
+ak_map <- get_stamenmap(bbox, zoom = 4)
+ak_map_3857 <- ggmap_bbox_to_3857(ak_map)
+```
+
+Plot with basemap!
+```{r}
+ggmap(ak_map_3857) + 
+  geom_sf(data = pop_3857, aes(color = population), inherit.aes = F) +
+  scale_color_continuous(low = "khaki", high =  "firebrick", labels = comma)
+```
+
+
+```{r}
+# create marker legend
+p1 <- ggplot() +
+    geom_sf(data = pop_3338, aes(size = population), show.legend = "point") +
+    scale_size(range = c(1, 20), labels = comma) +
+    theme(legend.position = "bottom") +
+    labs(size = "Population")
+l1 <- get_legend(p1)
+# create line legend
+p2 <- ggplot() +
+    geom_sf(data = rivers_3338, aes(size = StrOrder), show.legend = "line") +
+    scale_size(range = c(0.01,0.2)) +
+    theme(legend.position = "bottom")  +
+    labs(size = "Stream Order")
+l2 <- get_legend(p2)
+# create main map
+map_main <- ggplot() +
+    geom_sf(data = pop_3338, aes(size = population)) +
+    scale_size(range = c(1, 20), guide = F) + # don't draw a legend
+    ggnewscale::new_scale("size") +
+    geom_sf(data = rivers_3338, aes(size = StrOrder)) +
+    scale_size(range = c(0.01,0.2), guide = F) # don't draw a legend
+# create grid of map and legends
+plot_grid(map_main, l1, l2, ncol = 1, rel_heights = c(1, .3, .2))
 ```
 
