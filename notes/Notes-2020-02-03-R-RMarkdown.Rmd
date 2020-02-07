@@ -1,0 +1,200 @@
+---
+title: "Notes 2020-02-03"
+author: "Kaitlyn"
+date: "2/3/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+^ this thing is called a YAML header (Yet Another Markdown Language)
+
+## Best Practices for Data
+
+See full notes here:
+https://learning.nceas.ucsb.edu/2020-02-RRCourse/best-practices-data-and-metadata.html
+
+And slides in GitHub repo.
+
+Scientific products to include for reproducible science:
++ data
++ metadata - what is structure, contents, units of data? how sampling design relates to dataset?
++ software (including scripts)
+
+### Best practices
+
+Stay organized as you are going! Make it a part of your normal workflow, not something that you have to do at the end of a project.
+
+Work modularly. Don't put everything into one massive script. Stream raw data through to derived products (intermediate steps along the way). Separate phases for cleaning/integrating raw data, analyzing data.
+
+Raw data package: Fundamental set of observations (hasn't been interpreted in any way)
+
+Derived data package: Analytical product that somebody should use (starting point for all analysis and modeling). Never have to go back to the raw stuff; can write all of your manuscripts based on the derived data.
+
+Everything should be TRACEABLE. Copying and pasting values from Excel is not traceable. One of the goals of the course is to get us to stop using Excel ever :)
+Even the little changes, like fixing an error - which are easier to do manually in Excel - are better to do in scripts so that you have an audit trail and know what you did. Excel is fine for raw data entry, but otherwise, no!!
+
+Design database to ADD ROWS, NOT COLUMNS. (Didn't do this with Gorongosa camera trap check data - could be worth fixing this.)
+
+### Conversation about data sharing
+
+Importantly... there is a real cost. Not incentive in our field for thoroughly documenting, annotating, etc. but instead move on and write more papers. However, you often catch a lot of errors in this process, and other people can then use the code. As a community, makes us more productive, and improves quality of research.
+
+Also, in our field, incentive to hoard data so as not to get 'scooped' BUT if you publish your dataset, people will often reach out about collaborating. Also, there are so many findings that can come out of a given dataset.
+
+Can convince people that is actually in their self-interest to share data.
+
+Everybody's code is messy- once you can accept that, you'll feel more comfortable putting it out there. Also, the process of putting something out there makes you spend a bit more time on it, and makes it better (for you, too!)
+See [CRAPL](http://matt.might.net/articles/crapl/) license :)
+
+### Keeping your data tidy
+
+Do NOT have rows that sum columns. Just keep it as raw data. Don't use your data spreadsheet as a report.
+
+Only one tab - don't use proprietary software (Excel) but open-source file formats. Don't have formulae in your data sheets.
+
+Each dataset should be split into tables, where each table is a distinct measure of records. (Ex. site metadata, vs. individual records/observations at those sites) They can be joined later in analyses.
+
+### Odds and ends
+
+In the US, data cannot be copyrightable. Data are considered a fact - you can't copyright facts. Once somebody has your data, they can do anything with it, according to IP law. When you're licensing data, you're mostly describing ethical considerations around reusing your data. Scentific norms say that you should cite, collaborate, etc. depending on the terms that you lay out.
+
+Provenance - metadata about versioning
+
+
+
+## R/RStudio/RMarkdown
+
+### R Background
+
+R Studio = IDE (Integrated Development Environment)
+
+R style is to use <- as assignment operator, but = also works for assignment (not generally preferred, as it has other meanings, like specifying argument in function)
+If reading in English, can read "<-" as "gets the value of"
+Though == is a logical operator; can't just use =
+
+Variable names can include numbers, but cannot start with a number
+
+snake_case - perferred by tidyverse
+camelCase
+period.case - but this will cause problems in Python syntax, so probably good to not use this as it's confusing for Python users
+
+Don't be afraid to clear your environment!! If you are, then you aren't properly saving your scripts... Don't type things into the console, ever.
+
+Steps for data quality assurance- ensure that, in your cleaned data, the values are all in reasonable/acceptable ranges using range() function. Write some simple QC tests for your data, based on how you expect it to behave.
+
+**Function syntax:**
+
+function_name(argument_name1 = value)
+
+In a help file, if a function does not have a default argument specified with =, then that argument is required to be specified by you when you call the function.
+
+### RMarkdown
+
+RMarkdown is a great place to explain what you are doing. RMarkdown is useful for analysis, plotting, that kind of thing. For more straightforward data cleaning, programming, R files are good. If you're writing a lot of functions, perhaps better to just have in an R script that is sourced. It's better to source R files than source Rmd files.
+
+Knitting is not a great way to execute code while you are developing it. When you knit, it runs code in background environment, not the environment that you have open.
+
+I've always just deleted this first chunk, but I think it might be useful to keep, actually... This first setup chunk sets options for all of the subsequent code chunks. For example, can set default to echo = FALSE if you never want the code to show. 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Something that I just learned: even though you can't have duplicate labels when knitting (ex. two r setup), you can just have multiple R code chunks with NO labels without running into any problems.
+
+A new paragraph goes here. **This text is in bold!**
+
+A list (note that you need to have a blank line before the start of the list):
+
+* item 1
+* item 2
+
+If you forget what to do, go to Help > Markdown Quick Reference. Will include all formatting directives that RMarkdown supports.
+
+Hyperlink and ordered list.
+
+Now I will create a hyperlink to [my website](http://www.kaitlyngaynor.com) and a list of items
+
+1. one
+2. two
+3. three
+    + 3a
+
+A trick: if you just do "1." all the way down, RMd will recognize it as an ordered list and order them for you. This allows you to easily rearrange or put new items in without fixing the numbers.
+
+1. one
+1. two
+1. three
+
+Ticks can also be used to have text formatted like code, but it won't actually be executed. ``` x <- 4 * 3 ```
+
+## R Markdown Exercise
+
+If you want to save your .Rmd file in a subfolder, NOT the main directory, then you can add two periods to the start of the relative path to go up a directory first. 
+Ex. "read.csv(file = "../data/BGchem2008data.csv")
+
+Can use TAB to autocomplete. When using read_csv function, enter "" and then tab within them and it will show you all of the files that are available for you to import.
+You don't have to specify argument names explicitly (can just do it in order). If you know the function well, it's fine to specify first argument implicitly (without the name), but beyond that, don't trust your memory and use the actual argument names!
+```{r}
+bg_chem <- read.csv(file = "../data/BGchem2008data.csv", 
+                    stringsAsFactors = FALSE) 
+
+class(bg_chem)
+```
+
+**Differences between read.csv and read_csv**: The read.csv will parse the entire column to determine the column types, whereas read_csv will only parse the first ~100 rows of the column types to determine column types. This makes it much faster to read in, but can be screwy if your first 100 rows are NA or something.
+In read_csv, default for stringsAsFactors = FALSE which is nice. 
+
+In write.csv, the default argument is to have row names added, which is another improvement of write_csv.
+
+When you view the dataframe in RStudio, can filter by values of variables, and can also click and see little histograms of the data in that column. Can explore/filter/sort data without actually changing the structure of the dataframe.
+
+`$` is the list selector operator. Often use this in context of dataframes
+
+```{r}
+mean_temp <- mean(bg_chem$CTD_Temperature)
+
+plot(bg_chem$CTD_Depth, bg_chem$CTD_Temperature)
+```
+
+Can include code inline by using single backtick. Nice for putting values into text, and having them change as the code runs.
+
+My results showed a mean temperature of `r mean_temp`.
+
+Or if we don't want so many digits, use round(). My results showed a mean temperature of `r round(mean_temp)`
+
+
+
+## Data Documentation and Publishing
+
+See notes for more on this.
+
+Can I assign my dataset a DOI? You want it to be citable. (GitHub is not an archival location, no DOI associated.)
+
+You want people to be able to find your data. Something searchable. KNB, for example, will parse your data into searchable terms. But searchability depends on GOOD METADATA!!
+
+**KNB** is free, up to a certain size (<500 GB). The Knowledge Network for Biocomplexity (KNB) is an international repository intended to facilitate ecological and environmental research. https://knb.ecoinformatics.org/about
+
+**What is metadata?**
+A lot of people think of it as a plain README.txt. But advocate for structured metadata, with metadata standards, that specify what fields are required (title, contact, etc). [Ecological Metadata Language](https://knb.ecoinformatics.org/tools/eml) was developed by ESA for ecological data.
+
+Provenance statements: establish relationships between different files/objects within datapackage.
+
+**DataONE** = a federation of ~40 data repositories that are computationally interoperable. Can search across repositories.
+
+Writing metadata takes a long time. To get around this, incorporate it as part of your data collection process. Do it as you go.
+
+#### Tips for writing metadata
+
+Walked through demo exercise on demo.nceas.ucsb.edu - how to create metadata on KNB.
+
+Use a good title. That will be the first thing that people see. No abbreviations. But keep relatively short. Always good to indicate what was measured, where it was measured, and when. (Ex. Camera Trap Data from Gorongosa National Park, Mozambique, 2016-2018)
+
+Abstract should include context on why it's important, broader project, etc.
+
+Better to include things like methods in the metadata, rather than referencing other sources like the paper (paper may not be open access)
+
+**Attributes** are for tabular data. 
+
+Can specify provenance relationships - what scripts are used to generate files, or use files
+

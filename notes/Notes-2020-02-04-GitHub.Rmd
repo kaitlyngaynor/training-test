@@ -1,0 +1,177 @@
+---
+title: "GIT & GITHUB"
+author: "Kaitlyn"
+date: "2/4/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+See this great Git tutorial: https://learngitbranching.js.org/
+
+### Basics of Git(Hub)
+
+Can create tags to mark versions at different stages - ex. when you submitted original manuscript, revised manuscript. What version was used to create a given project?
+
+Don't use crazy file naming conventions!
+
+Can branch out versions if you're bug fixing, or trying something out, and merge (or not merge) back in with main branch.
+
+**git** = version control software used to track files in a folder (repository)
+
+**GitHub** = website that allows users to store/share 
+
+#### How Git Works
+
+workspace --add--> staging index --commit--> local repository --push--> remote repository
+
++ "local" copy of git repository (stored on your computer)
++ you interact with local copy via Terminal; there ARE copies stored locally
++ can set up remote repository ("origin" is what it is called) with `git remote`
++ "origin" copy is on GitHub/cloud - interacts with local repository via `git pull` and `git push`
++ can also make changes directly to origin via GitHub website (but not recommended)
++ "origin/HEAD" represents what version you have checked out - current working copy in tree (if you roll back to previous version, head will be this version)
+
+Even if you are just working by yourself, it makes sense to have things backed up to origin. Helps you work on multiple computers without merge conflicts.
+
+It works better for scripts than for other kinds of files. Ex. Word documents are binary files, and Git can't deal with changes in a very efficient way.
+
+
+#### Managing repository sizes
+
++ Everything in your local git repository lives in the local folder. There is a hidden .git file in the folder and this has all of the information about the history.
++ If you want to know how large the whole history is, can type `du -sh .git` and this command will tell you how big the entire repository is.
++ There is a limit on GitHub as to how large repositories can be (1 GB). So this limits the size of the data files that you can continuously update.
++ GitHub should be a source code repository, NOT a data repository. Use the data repositories that we talked about yesterday.
+
+
+
+#### Initializing repo
+
++ When you initialize repository on GitHub, add .gitignore for R (see section below). This will prevent git from tracking R data files that are binary files that can load your system.
++ Adding a license is a good idea. It's not legal for people to copy and use your code/software without a license. So by providing a license, you make your expectations explicit. Apache 2.0 is a great one to start with if you don't want to dig in too deeply and don't have a strong opinion.
+
+The RProj file in your repository just includes the settings for that R Project (including the number of spaces for a tab). Don't necessarily need to upload this; it basically just forces your settings on your collaborators? But no harm in committing it.
+
+
+##### More on the GitIgnore file
+
++ You can modify the.gitignore file just like any other file in your repository. This file just includes the files that you do NOT want uploaded to Git. If you want it to ignore all csv files, for example, just add *.csv to the .gitignore. Then these files will not show up in the git window. 
++ Can also ignore just a specific file - write the whole name out.
++ Can ignore an entire folder. To ignore "data" file, write `/data/` in .gitignore
++ If you are making changes that aren't showing up as expected in the Git pane, check the .gitignore file, because you or one of your collaborators may have ignored that file type/folder.
+
+
+#### Committing
+
++ Commit often! Enables better versioning.
++ You always have to have a commit message.
++ Commit files together if it's the same type of change (consistent across documents), separately if they are different changes. Can have multiple files associated with a single commit
++ Can add a long commit message if there is a lot to explain. Can justify why decisions were made. Provide yourself with the information that you need to know what you did and why you did it
+
+
+#### Pulling & pushing
+
++ Pull at the beginning of the day, and pull before you commit (definitely before you push). This helps with avoiding merge conflicts when working collaboratively
+
+
+#### Interacting with Git through RStudio
+
++ You can use RStudio rather than Terminal; GUI and friendly
++ Yellow boxes with question marks indicate that the file is not known to Git
++ Green box with A indicates that the file is staged to be added to Git; not yet committed
++ Blue box with M indicates that the file has been modified; not yet committed
+
+## Collaborating with Git
+
+Git is great for collaborating, but it can be hard for groups when people have very different levels of experience, given the learning curve. Start small (just a master branch). 
+
+#### Resolving merge conflicts
+
++ If you and your collaborator make changes in different parts of the file, Git can figure out how to merge them together. BUT that doesn't necessarily mean that those changes are compatible together - there may be a logical mismatch. Maybe one of the changes means that the other change later in the code won't work.
++ If two collaborators commit versions with conflicting changes, whoever pushes second will get an error. YOu need to pull the changes first, and merge them in, before you can push.
++ Both versions will be stored in GitHub history, once they are successfully merged together. But the merged version will go forward.
++ Owner has no authority over other collaborators when it comes to conflicting versions.
+
+#### To avoid these conflicts:
+
++ Communicate often. Tell each other what you are working on.
++ Pull -> Edit -> Add -> Pull -> Commit -> Push
++ Pull before every commit, and commit often in small chunks.
+
+#### Working with pull requests
+
+See here in textbook for more on this: https://learning.nceas.ucsb.edu/2020-02-RRCourse/collaborating-using-git.html
+
+Pull requests are a better way to collaborate than granting direct collaborator access. Write polite pull requests (and don't use the word 'bug' because sometimes people get sensitive).
+
+If you fork a repository, and want to pull changes from the main branch... need to get into Terminal. Command `git remote -v` will tell you what git repository you are using. In order to pull from an upstream repository, go to GitHub, copy the .git URL, type `git remote add upstream [COPY URL FROM GITHUB]`
+
+## Branching and tagging
+
+Branches can be a way to organize experimental coding so you can keep track of what is happening, but have in the same repository and easy to merge things back together. Before, merge conflict created an accidental branch, but we can also create an intentional branch. When working in a team, you may want to have a master branch that is used, and then a development brach that is merged back in after development is complete.
+
+Can create a branch in RStudio GUI. In Git pane, click purple box icon to create a new branch. Can then toggle in drop-down menu between master and develop.
+
+You branch the entire repository, not a single file.
+
+If you want to merge the two branches together, need to do from command line; RStudio does not support this.
+
+While you are in the master branch, use git merge command with the name of the branch that you want to move in `git merge [branch name]`
+
+#### Tagging
+
+If you want to create a tag that marks a version of a repository, you can use the `git tag` command. If you are in that version, you can just go to the command line type `git tag TAGNAME` with whatever TAGNAME you want. 
+
+If you want to tag an older version of the repository, you need to know the "SHA" commit ID, which you can find in history in Git pane. `git tag OLDTAGNAME xxxxx` where xxxxx is the commit ID.
+
+You might want to tag versions of software releases, manuscript submission, etc.
+
+
+## Publishing GitHub Pages
+
+**Repo URL**: https://github.com/{username}/{repo}
+**Pages URL**: https://{username}.github.io/{repo}
+
+Super super easy to do. Just go into repository Settings > Options > GitHub Pages, and change Source to master branch.
+
+This is basically what I was doing when I was knitting html files and sending them to collaborators. Very easy to just upload to github and share the link (and then it updates dynamically).
+
+Jekyll and Hugo are both ways of using Markdown to generate HTML files. They have effective themes at building layouts. 
+
+**Bookdown** - Tool for using RMarkdown to create books (like all of the ones that we see online everywhere for R tutorials)
+
+See: https://bookdown.org/yihui/rmarkdown/books.html
+
+
+## QUESTIONS
+
+**Can you fork a file vs. a repository? (How to branch?)**
+
+(Didn't ask, but seems like maybe if you're working on your own it makes sense to just plug along and then revert to an earlier version if you decide that you don't want to keep the changes that you've made.)
+
+Ok we got to it later. One small note: when we were creating merge conflicts, we did it with a single file, but it could also involve multiple files in a single "change set."
+
+You don't "fork" or "branch" a file, but rather an entire repository.
+
+**When you delete a file on GitHub, do the old versions stay there?**
+
+Yes! You can always go back to previous versions of repository and find old files. (Another reason not to keep big files in git.)
+
+**Possible to organize repositories on GitHub in folder structure (independent of how they are organized on computer?)**
+
+No? But can use projects.
+
+**How do you know when something should be in a separate repository/RProject? Some of mine are massive (is it an entire field site, or a single manuscript, or...?)**
+
+Really a matter of preference, but it generally makes sense to keep repositories small but self-contained. It IS possible to pull in data from other repositories if need be. If you are repeatedly using scripts from a given repository, makes sense to just make a package.
+
+**I now have a lot of GitHub repos in my Dropbox folder... how to deal with this? I also have a lot of big files in these R projects but that won't go on GitHub because they are too big, and I do want them backed up somewhere.**
+
+Not a good idea to have git folders in a Dropbox. This can create some problems. For large RAW data files, it makes sense to back them up in Dropbox. Then can keep them in the local RProj/repository folder and just not back them up to GitHub. For DERIVED products, as long as I have the code that I need to generate them, I shouldn't need versions of the files themselves. This makes more sense.
+
+It won't cause a catastrophic failure if I move everything from the Dropbox folders into GitHub repositories. It might mess up some file path stuff, though.
+
+Backing up large CSV files or binary files doesn't work well. Git is good for versioning code; it only records the lines that change, not a copy of the entire file. However, for a CSV file that may have a new column added, you are backing up the entire file again, and this takes up a lot of space.

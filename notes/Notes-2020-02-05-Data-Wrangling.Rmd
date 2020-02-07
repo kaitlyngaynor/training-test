@@ -1,0 +1,50 @@
+---
+title: "Untitled"
+author: "Kaitlyn"
+date: "2/5/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+split --> apply --> combine
+
+Can do this easily in dplyr: `group_by() %>% summarise()`
+
+*See all code in training-test-kaitlyn repository, in data-cleaning.Rmd file.*
+Note that this code is iterative; I wanted to keep a record of all of the changes that we made as we went through the exercise. But if this were an actual data cleaning exercise, we would want to keep this document clean. 
+
+**Quality Control on Data**
+
+Rather than keep the code that didn't work, just include some exposition about why you included the code that you did work (the issues that are now known to you, based on the trial and error).
+
+And then any of the checks that you did to identify errors/issues should be formalized into a QA section of your document/script.
+
+To fix consistent issues like misspellings, multiple versions of species names, different taxonomic classifications for the same species, etc., it makes sense to create a **lookup table** that is a dataframe with a column for the incorrect version and a column for the correct version, and then merge it in and take the correct column. Avoid thousands of if/else statements.
+
+**Don't repeat yourself**: If you are copying and pasting lines a bunch of times, that is probably a sign that you need to step back and rethink your workflow.
+
+## Data import and tidying
+
+**Calling libraries**: In an R/RMarkdown document, it's important to call all libraries within the document. It's nice to add all libraries at the start of the code in a single chunk up top, rather than load libraries as you need them. This helps collaborators who may need to install packages in order to run your code. Some people like to load tidyverse, other people like to explicitly load individual packages. Tidyverse a bit of a cult? :)
+
+**Masked objects**: In R, we often don't specify the package when we load a function. But when you load a package qnd get a warning that objects (including functions) are masked, you will need to specify the package in order to use the "masked" functions. When you load dplyr, for example, it masks `filter` from `package:stats` in base. so if you want to call it, you need to call `stats::filter()`. General example: `package_name::function_name()` When you're running into problems, you might consider changing the order that load packages (last one will have precedence) or explicitly calling problem functions every time.
+
+**Reading files from the web**: Can read csv/files straight from URL rather than first saving locally on disk. It's a great way to keep your hard drive from clogging up, sharing with collaborators, and accessing same version of file every time. (for Windows users, might need to add `url("URL HERE", method = 'libcurl')` instead of just `"URL"`.
+
+Nice to keep the version of the data that you read in, rather than rewriting it with tidied data, just in case you need to go back to it.
+
+**Using the pipe operator**: Can read the pipe operator `%>%` as the word "then." You can avoid saving intermediate steps, which makes for cleaner code and also means that you aren't writing every step to disk. 
+
++ Shortcut = command + shift + m
++ Pipe takes the input and makes it the first argument of the next function
++ Tidyverse plays well with pipes because the first argument of every function is a dataframe
++ When using line breaks, the line break should be AFTER the pipe %>%, not BEFORE
+
+**Don't reference column index**: Always better to reference column names. If things change, your code won't break entirely. Tidyverse has a series of `y` functions that allow you to select columns based on a set of rules.
+
+**Joining**: If you do a left_join, you would expect to have the same number of rows as in the left dataframe. If you end up with more, that means that your right dataframe does not have unique primary key.
+
+

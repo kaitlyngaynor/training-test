@@ -1,0 +1,41 @@
+---
+title: "Debugging"
+author: "Kaitlyn"
+date: "2/6/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Debugging in R
+
+Some sample code
+```{r}
+simplesum <- function(x,y) {
+  a = sum(x,y)
+  return(a)
+}
+
+sumwithnext <- function(n) {
+  o <- simplesum(n, n-1)
+  return(o)
+}
+
+```
+
+Can use "debug" function in base R. Lets you step through function one step at a time, and see the environment as things run. Just start by running `debug(function)`. Callstack/Traceback allows you to see the environment that was associated with each of the calls in the stack.
+
+```{r}
+debug(sumwithnext)
+sumwithnext(2)
+```
+
+Can also add a debugger in RStudio by clicking next to the line and adding a red dot; it will stop running when it gets there and enter debug mode.
+
+You can also change the settings in Debug dropdown. Default is that when there is an error, it will break in the code. But you can change it so that when there is an error, it will open the error inspector.
+
+Doesn't work as well in RMd as in R scripts.

@@ -1,0 +1,14 @@
+---
+title: "Shiny"
+author: "Kaitlyn"
+date: "2/6/2020"
+output: html_document
+---
+[] = subscript operator
+$ = list operator
+
+COMMAND + I will fix all of your tabs for you
+
+Shiny is a deep well that you can dive down... be careful, sometimes people don't come out of it.
+
+Fluid layout - doesn't give you a lot of specifics on how items are laid out on page, but adapts to size of window so that things look okay

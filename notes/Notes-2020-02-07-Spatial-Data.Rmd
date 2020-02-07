@@ -1,0 +1,31 @@
+---
+title: "Spatial data"
+author: "Kaitlyn"
+date: "2/7/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Load libraries.
+```{r}
+library(sf)
+library(dplyr)
+library(ggplot2)
+library(leaflet)
+library(scales)
+library(ggmap)
+```
+
+Read in the data and look at a plot of it.
+```{r}
+## Read in shapefile using sf
+ak_regions <- read_sf("data/shapefile_demo_data/ak_regions_simp.shp")
+
+plot(ak_regions)  
+```
+

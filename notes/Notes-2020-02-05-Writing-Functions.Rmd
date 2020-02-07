@@ -1,0 +1,61 @@
+---
+title: "Notes-02-02-05-Writing-Functions"
+author: "Kaitlyn"
+date: "2/5/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Writing Functions
+
+See functions.Rmd in training-test-kaitlyn repo for example of how to write and document a function.
+
+Any time you find yourself copying and pasting more than once, WRITE A FUNCTION!
+
+Let's say you have this code:
+
+```
+x <- 5
+f <- function(x) {
+  x <- x + 1
+  return(x)
+}
+```
+
+In the global environment, x is 5.
+If you run f(), x will start out as 5, then become 6 and return 6...
+but x will still be 5 in the global environment.
+It's important to understand how the global environment and the environment of the function are related to one another when you are debugging functions.
+
+**roxygen2** is a language for documenting functions
+
+Documenting functions is always a good idea. Good practice to have, and it makes it easier to publish things as packages down the line. 
+
+Sometimes, if the code that you are writing is not going to be useful elsewhere, it makes sense to use a loop rather than a function.
+
+In functions, can use `stopifnot` - for example, if the input x needs to be a number and it isn't, then you can add `stopifnot(is.numeric(x))` at the beginning of your function. Can also use `assert_that` - for example, `assert_that(is.numeric(x))` But both of these put people into debugging environment.
+
+
+## Writing Packages
+
+`source` externalizes a chunk of code and lets you call it whenever you want to run it.
+
+If you find yourself sourcing a set of functions repeatedly from different scripts, this is when it makes sense to write a package. So it's useful to make a package just for you - not even to distribute widely. Codify your personal practices in a way that is easy to repeat across your projects. In a lab, for example, you might have a package for the quality assurance routines that check the data.
+
+A package should be in its own repository, with the same name as the package.
+
+The `usethis` package helps you create the skeleton of another R project inside another R project. 
+
+Common practice: one function per file. The name of the .R file is the name of the function.
+
+You can manually download packages from GitHub - good way of sharing with colleagues. devtools package has a tool `install_github` that allows you to do this directly. Then you don't have to download from CRAN
+
+See notes doc, which walks through what we did: 
+https://learning.nceas.ucsb.edu/2020-02-RRCourse/creating-r-packages.html#create-a-basic-package
+
+To publish on CRAN, you have to go through review. The package devtools helps you prepare to publish something on CRAN. 
+
+

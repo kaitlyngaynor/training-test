@@ -1,0 +1,33 @@
+---
+title: "Data Modeling and Tidy Data"
+author: "Kaitlyn"
+date: "2/4/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**Some basic rules:**
+
++ one observation = one row & one variable/attribute = one column
++ when data are too "wide," you often get data embedded into the names of the columns
++ you can always get your data into formats for analysis, but start out with this formula
+
+If you changed the way that you measured a given variable (even if it's the number of decimal points/precision of the instrument), they should technically be in separate columns.
+
+When you build a normalized data model, every data table should have a unique **primary key**, representing a unique set of rows. For example, in a table with information about each site, you need a "Site" column where each site has its own row. Then this can be used to match Site information to an Observation table that has a **foreign key** column for Site with non-unique values, given that there are multiple observations for each site.
+
+**Crow's Foot Notation** is used to illustrate relationships between datasets. See more info here in textbook: https://learning.nceas.ucsb.edu/2020-02-RRCourse/data-modeling-tidy-data.html#related-resources
+
+Types of joins
+
++ inner join: keeps only records with associated values in BOTH tables
++ left join: keeps all records in left table, matches right (and fills in NA if missing). Should have same number of rows as the left table (same as right join, in principle)
++ full join: keeps all records in both tables, fills in NA for both left and right tables
+
+
+Frequently, in ecological data, you will have 'compound key.' For example, region-year-species. Reflects your sampling design. But to make it easier to manage, you might add a surrogate primary key called "ObsID" or something, which represents a unique value.
+
+Don't mess with raw data; instead, clean the data, and include a script that includes all of the changes that you made to get from that original data to the derived data file. Good to rearchive with code for EVERY SINGLE STEP, even if it seems like a trivial fix of a typo. 
