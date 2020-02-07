@@ -41,4 +41,9 @@ vignettes/*.pdf
 # ignore DS Store
 *.DS_Store
 
+# ignore slides, reading, and data folder
+slides
+data
+reading
+
 shapefile_demo_data/
